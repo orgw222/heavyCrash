@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>myCollection</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/getParameter.js"></script>
+    <style>
+        /*.thumb-post{*/
+        /*    object-fit: none; !* Do not scale the image *!*/
+        /*    object-position: center; !* Center the image within the element *!*/
+        /*    width: 100%;*/
+        /*    max-height: 250px;*/
+        /*    margin-bottom: 1rem;*/
+        /*}*/
+    </style>
+    <script>
+        $(function () {
+            var search = location.search;
+            if (search.indexOf('pname')>0){
+                pname = getParameter("pname");
+                if (pname){
+                    pname = window.decodeURIComponent(pname);
+                }
+            }else {
+                pname="";
+            }
+            load(1, pname);
+            $("#search-button").click(function () {
+                var pname2 = $("#search-input").val();
+                location.href="myPost.html?pname="+pname2;
+            });
+        });
+        function deletePost(pid){
+            $.get("post/deleteByPid",{pid:pid},function () {
+                load(1, '');
+            });
+        }
+        function load(currentPage, pname){
+
+            $.get("post/pageQueryUser",{currentPage:currentPage, pname:pname},function (pb) {
+
+                if(pb.totalPage==0){
+                    if(pname=''){
+                        $("#row1").html('<h1>你还没有发布任何帖子！<h1>');
+                    }else {
+                        $("#row1").html('<h1>没有符合条件的帖子！<h1>');
+                    }
+
+                    $("#row2").html('');
+                    $("#page_lis").html('');
+                    return;
+                }
+                // $("#totalPage").html(pb.totalPage);
+                // $("#totalCount").html(pb.totalCount);
+
+                // <li>
+                //     <a href="#" aria-label="Previous">
+                //         <span aria-hidden="true">&laquo;</span>
+                //     </a>
+                // </li>
+                // <li className="active">
+                //     <span>1 <span className="sr-only">(current)</span></span>
+                // </li>
+                // <li><a href="#">2</a></li>
+                // <li><a href="#">3</a></li>
+                // <li><a href="#">4</a></li>
+                // <li><a href="#">5</a></li>
+                // <li>
+                //     <a href="#" aria-label="Next">
+                //         <span aria-hidden="true">&raquo;</span>
+                //     </a>
+                // </li>
+                var lis = "";
+                var preNum = pb.currentPage-1>0?pb.currentPage-1:pb.currentPage;
+                var nextNum = pb.currentPage+1<=pb.totalPage?pb.currentPage+1:pb.currentPage;
+                // var firstPage = '<li onclick=load(1,"'+pname+'") style="cursor: pointer"><a href="javascript:void(0)" >首页</a></li>';
+                var prePage = '      <li onclick=load('+preNum+',"'+pname+'") style="cursor: pointer">\n' +
+                    '                    <a aria-label="Previous">\n' +
+                    '                        <span aria-hidden="true">&laquo;</span>\n' +
+                    '                    </a>\n' +
+                    '                </li>';
+                var nextPage = '<li onclick=load('+nextNum+',"'+pname+'") style="cursor: pointer">' +
+                    '                   <a aria-label="Next" >' +
+                    '                       <span aria-hidden="true">&raquo;</span>' +
+                    '                   </a>' +
+                    '           </li>';
+                // var lastPage = '<li onclick=load('+pb.totalPage+',"'+pname+'") style="cursor: pointer"><a href="javascript:void(0)" >末页</a></li>';
+                lis += prePage;
+
+                var begin;
+                var end;
+
+                if (pb.totalPage<5){
+                    begin = 1;
+                    end = pb.totalPage;
+                }else {
+                    begin = pb.currentPage-3<1? 1: pb.currentPage-3;
+                    if(pb.totalPage-pb.currentPage<2){
+                        begin = pb.totalPage-4;
+                    }
+                    end = begin+4;
+                }
+
+
+                var li;
+                for (var i = begin; i<=end; i++){
+                    if (i == pb.currentPage){
+                        li = '               <li class="active" >\n' +
+                            '                    <span>'+i+'<span class="sr-only">(current)</span></span>\n' +
+                            '                </li>';
+                    }else {
+                        li = '<li onclick=load('+i+',"'+pname+'") style="cursor: pointer"><a>'+i+'</a></li>';
+                    }
+
+                    lis += li;
+                }
+                lis += nextPage;
+
+                $("#page_lis").html(lis);
+
+                var route_lis = "";
+                if(pb.list.length<=3){
+                    for (i = 0; i<pb.list.length; i++){
+                        var post = pb.list[i];
+                        var rli = '            <div class="col-sm-6 col-md-4">\n' +
+                            '                <div class="thumbnail">\n' +
+                            '                    <a href="post.html?pid='+post.pid+'">\n' +
+                            '                        <img src="images/'+post.floorList[0].image+'" alt="...">\n' +
+                            '                    </a>\n' +
+                            '                    <div class="caption">\n' +
+                            '                        <h3>'+post.title+'</h3>\n' +
+                            '                        <p>'+post.floorList[0].content+'</p>\n' +
+                            '                        <p>\n' +
+                            '                            <a href="post.html?pid='+post.pid+'" class="btn btn-primary" role="button">详情</a>\n' +
+                            // '                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>\n' +
+                            '                            <a href="javascript:;" onclick=deletePost('+post.pid+','+i+',"'+pname+'") class="btn btn-danger " role="button">删除</a>\n' +
+                            '                        </p>\n' +
+                            '                    </div>\n' +
+                            '                </div>\n' +
+                            '            </div>'
+                        route_lis += rli;
+                        $("#row1").html(route_lis);
+                        $("#row2").html("");
+
+                    }
+                }else {
+                    for (i = 0; i<3; i++){
+                        var post = pb.list[i];
+                        var rli = '      <div class="col-sm-6 col-md-4">\n' +
+                            '                <div class="thumbnail">\n' +
+                            '                    <a href="post.html?pid='+post.pid+'">\n' +
+                            '                        <img src="images/'+post.floorList[0].image+'" alt="..." >\n' +
+                            '                    </a>\n' +
+                            '                    <div class="caption">\n' +
+                            '                        <h3>'+post.title+'</h3>\n' +
+                            '                        <p>'+post.floorList[0].content+'</p>\n' +
+                            '                        <p>\n' +
+                            '                            <a href="post.html?pid='+post.pid+'" class="btn btn-primary" role="button">详情</a>\n' +
+                            // '                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>\n' +
+                            '                            <a href="javascript:;" onclick=deletePost('+post.pid+','+i+',"'+pname+'") class="btn btn-danger " role="button">删除</a>\n' +
+                            '                        </p>\n' +
+                            '                    </div>\n' +
+                            '                </div>\n' +
+                            '            </div>'
+                        route_lis += rli;
+                    }
+                    $("#row1").html(route_lis);
+                    route_lis = '';
+                    for (i = 3; i<pb.list.length; i++){
+                        var post = pb.list[i];
+                        var rli = '       <div class="col-sm-6 col-md-4">\n' +
+                            '                <div class="thumbnail">\n' +
+                            '                    <a href="post.html?pid='+post.pid+'">\n' +
+                            '                        <img src="images/'+post.floorList[0].image+'" alt="..." >\n' +
+                            '                    </a>\n' +
+                            '                    <div class="caption">\n' +
+                            '                        <h3>'+post.title+'</h3>\n' +
+                            '                        <p>'+post.floorList[0].content+'</p>\n' +
+                            '                        <p>\n' +
+                            '                            <a href="post.html?pid='+post.pid+'" class="btn btn-primary" role="button">详情</a>\n' +
+                            // '                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>\n' +
+                            '                            <a href="javascript:;" onclick=deletePost('+post.pid+','+i+',"'+pname+'") class="btn btn-danger " role="button">删除</a>\n' +
+                            '                        </p>\n' +
+                            '                    </div>\n' +
+                            '                </div>\n' +
+                            '            </div>'
+                        route_lis += rli;
+                    }
+                    $("#row2").html(route_lis);
+                }
+                //window.scrollTo(0,0);
+            });
+
+        }
+    </script>
+</head>
+<body>
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4 col-sm-offset-8">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="search-input" placeholder="在我的帖子中搜索">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" id="search-button" type="button">Go!</button>
+                    </span>
+                </div><!-- /input-group -->
+            </div><!-- /.col-lg-6 -->
+        </div><!-- /.row -->
+        <hr>
+        <div class="row" id="row1">
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>听说如果把标题写的很长很长很长更容易水到经验</h3>
+                        <p>听说如果把标题写的很长很长很长更容易水到经验</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>听说如果把标题写的很长很长很长很长很长很长很长很长很长更容易水到经验</h3>
+                        <p>听说如果把标题写的很长很长很长很长很长很长很长很长很长更容易水到经验听说如果把标题写的很长很长很长很长很长很长很长很长很长更容易水到经验听说如果把标题写的很长很长很长很长很长很长很长很长很长更容易水到经验听说如果把标题写的很长很长很长很长很长很长很长很长很长更容易水到经验</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>帖子标题</h3>
+                        <p>帖子内容？</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="row2">
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>帖子标题</h3>
+                        <p>帖子内容？</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>帖子标题</h3>
+                        <p>帖子内容？</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <div class="thumbnail">
+                    <a href="#">
+                        <img src="images/cont/main_img1.jpg" alt="...">
+                    </a>
+                    <div class="caption">
+                        <h3>帖子标题</h3>
+                        <p>帖子内容？</p>
+                        <p>
+                            <a href="#" class="btn btn-primary" role="button">详情</a>
+                            <a href="#" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-heart"></span> 99</a>
+                            <a href="#" class="btn btn-danger col-sm-offset-5" role="button">删除</a>
+                        </p>                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <nav aria-label="Page navigation" class="col-sm-6 col-sm-offset-3">
+                    <ul class="pagination" id="page_lis">
+                        <li>
+                            <a href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="active">
+                            <span>1 <span class="sr-only">(current)</span></span>
+                        </li>
+                        <li><a href="#">2</a></li>
+                        <li><a href="#">3</a></li>
+                        <li><a href="#">4</a></li>
+                        <li><a href="#">5</a></li>
+                        <li>
+                            <a href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="js/include.js"></script>
+</body>
+</html>
